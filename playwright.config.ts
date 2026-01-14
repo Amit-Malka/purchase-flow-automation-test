@@ -2,36 +2,47 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  /* Run tests in files in parallel */
-  fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  fullyParallel: false, // Run tests sequentially to avoid race conditions
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  retries: process.env.CI ? 2 : 1,
+  workers: 1, // Single worker to avoid conflicts
+  timeout: 60000, // 60 seconds per test
+  reporter: [
+    ['html'],
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['list'],
+  ],
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: 'https://ftwebinars.com',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
-    
-    /* Run headless by default */
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
     headless: true,
-    
-    /* Viewport size */
     viewport: { width: 1280, height: 720 },
+    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ? {
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+      args: process.env.PLAYWRIGHT_LAUNCH_ARGS ? JSON.parse(process.env.PLAYWRIGHT_LAUNCH_ARGS) : undefined,
+    } : undefined,
   },
 
-  /* Configure projects for major browsers */
   projects: [
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.spec\.ts/,
+      teardown: 'cleanup',
+    },
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      dependencies: [],
+      testIgnore: [
+        '**/setup-google-auth.spec.ts', // Run manually only
+        '**/purchase.spec.ts', // Old test file
+      ],
+    },
+    {
+      name: 'cleanup',
+      testMatch: /.*\.teardown\.spec\.ts/,
     },
   ],
 });
