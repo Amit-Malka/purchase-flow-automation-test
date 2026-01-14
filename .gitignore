@@ -1,0 +1,13 @@
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.env
+.gemini/
+cdk.out/
+*.js
+*.d.ts
+!jest.config.js
+src/auth-state/google.json
+gha-creds-*.json
